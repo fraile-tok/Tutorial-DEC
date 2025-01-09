@@ -1,0 +1,181 @@
+############
+# SETTINGS #     
+############ 
+
+# Todo el sistema de archivos
+out_fp     = "output/"
+data_fp    = "data/"
+code_fp    = "code/"
+
+# Como queremos correr los analisis?
+use_mol    = false
+do_fbd     = false
+pruned     = true # con o sin fosiles?
+fixed      = true # topologia fija o no?
+use_stoch  = true
+use_epochs = false
+under_prior = false
+
+#######################
+# PARAMETROS GLOBALES #
+#######################
+n_areas = 4 ##!!!!
+max_areas = 2 ##!!!
+
+# LA CADENA MCMC #
+n_gens      = 1000
+n_burn      = 500
+tune_freq   = 10
+sample_freq = 10
+n_runs      = 1
+
+# MOVIMIENTOS Y MONITOREO #
+mni = 1
+mvi = 1
+
+#########################
+# ESCRITURA DE ARCHIVOS #
+#########################
+if (!exists("job_str")) job_str = "mi_corrida.1"
+if (under_prior) job_str += ".bajo_prior"
+if (!use_epochs) job_str += ".no_epoch"
+if (!use_stoch) job_str += ".no_stoch"
+out_fn  = job_str
+
+
+# LOS DATOS #
+if(!pruned) taxa_fn = "Test_taxa.tsv"
+if(pruned) taxa_fn = "Test_taxa_pruned.tsv"
+
+taxa <- readTaxonData(data_fp + taxa_fn)
+n_taxa <- taxa.size()
+n_branches <- 2 * n_taxa - 2
+
+
+mol_fn = "Test_aln.nex"
+if(do_fbd) {
+cytb <- readDiscreteCharacterData(data_fp + mol_fn)
+	cytb.addMissingTaxa(taxa)
+}
+
+
+intervals_fn = "Test_Fossil_intervals.tsv"
+intervals = readDataDelimitedFile(file = data_fp + intervals_fn, header=true)
+
+
+if(!pruned) tree_init_fn = "Test_Master_Full.trees"
+if(pruned) tree_init_fn = "Test_Master_Pruned.trees"
+
+if(pruned) mcctree = "Test_MCC_Master_Pruned.trees"
+if(!pruned) mcctree = "Test_MCC_Master_Full.trees"
+
+if(fixed) fbd_tree <- readTrees(data_fp + mcctree)[1]
+if(!fixed) treetrace = readTreeTrace(data_fp + tree_init_fn, treetype="clock", burnin=0.0, thinning=1)
+
+
+if(!pruned) range_fn = "Test_range.nex"
+if(pruned) range_fn = "Test_range_pruned.nex"
+max_areas = max_areas
+n_states  = 0
+for (k in 0:max_areas) {n_states += choose(n_areas, k)}
+
+dat_bg_n = readDiscreteCharacterData(file = data_fp + range_fn)
+dat_bg_n = formatDiscreteCharacterData(dat_bg_n, "DEC", n_states)
+
+
+bg_times_fn = "Test.bg.times.txt"
+conn_fn = "Test.area_graph.n" + n_areas
+times_bg    = readDataDelimitedFile(file = data_fp + bg_times_fn, header=true, delimiter=",")
+n_bg_epochs = times_bg.size()
+if(!use_epochs) n_bg_epochs = 1
+for (i in 1:n_bg_epochs) {
+    connectivity_bg[i] = readDataDelimitedFile(file = data_fp + conn_fn + "." + i + ".csv", header=true, rownames=true, delimiter=",")
+}
+
+
+###########################################
+# Tree model, Clock & Substitution models #
+###########################################
+# Only read if running the full joint inference
+if(do_fbd) source("clades.Rev")
+if(do_fbd) source("model_FBDP_A.Rev")
+if(do_fbd) source("model_UExp.Rev")
+if(do_fbd) source("model_GTR.Rev")
+
+##########################
+# Range Evolution models #
+##########################
+source(code_fp + "model_biogeo.Rev")
+
+
+
+########
+# MCMC #
+########
+mn = VectorMonitors()
+mymodel = model(m_bg)
+mymodel.graph("Model_graph.txt")
+
+mn.append(mnModel(filename = out_fp + out_fn + ".model.log", printgen= sample_freq))
+mn.append(mnJointConditionalAncestralState(filename = out_fp + out_fn + ".bg.states.txt", printgen = sample_freq, tree = fbd_tree, ctmc = m_bg, type="NaturalNumbers"))
+
+mn.append(mnScreen(printgen= sample_freq))
+#if (!fixed) mn[mni++] = mnFile(filename=out_fp + out_fn + ".trees", printgen= sample_freq, fbd_tree)
+if(use_stoch){ mn.append(mnStochasticCharacterMap(ctmc = m_bg, filename = out_fp + out_fn + ".bg.stoch_map.txt", printgen=sample_freq))}
+
+mymcmc = mcmc(mymodel, mn, mv, nruns = n_runs)
+
+# Run the MCMC #
+#mymcmc.burnin(generations=n_burn, tuningInterval= tune_freq)
+mymcmc.run(generations=n_gens, underPrior= under_prior, checkpointInterval=100, checkpointFile = out_fp + out_fn + ".state")
+q()
+
+#######################
+# SUMMARISING OUTPUTS #
+#######################
+
+fn = "mi_corrida.1.no_epoch" # one single run
+make_states = true
+pruned = true
+fixed = true
+
+# Location of tree files
+if(pruned) out_fp = "output/"
+data_fp    = "data/"
+
+f_burn = 0.10
+
+print("Processing output for fn = \"" + fn + "\"")
+print("--> Reading tree trace file")
+if(pruned) mcctree = "Test_MCC_Master_Pruned.trees"
+if(fixed) mcc_tree <- readTrees(data_fp + mcctree)[1]
+
+if(!fixed) state_tree_trace  = readTreeTrace(file= out_fp + fn, treetype="clock",burnin=f_burn)
+#state_tree_trace.setBurnin(f_burn)
+if(!fixed) mcc_tree = mccTree(trace = state_tree_trace,file = out_fp + fn + ".mcc.tre", positiveBranchLengths=true)
+
+if (make_states) {
+    print("--> Reading ancestral range estimate trace file")
+    state_trace_bg = readAncestralStateTrace(file=out_fp +fn + ".bg.states.txt", separator="\t")
+    print("--> Building ancestral range estimates (this can take a while)")
+    bg_tree = ancestralStateTree(tree = mcc_tree,
+                       ancestral_state_trace_vector = state_trace_bg,
+                       include_start_states = true,
+                       file = out_fp + fn + ".bg.ase.tre",
+                       summary_statistic="MAP",
+                       reconstruction="conditional",
+                       burnin= f_burn,
+                       nStates=2,
+                       site=1)
+}
+print("...done!")
+
+# read in character map trace files
+bg_anc_state_trace = readAncestralStateTrace(out_fp + fn + ".bg" + ".stoch_map.txt") 
+
+# create a file that summarizes the sampled stochastically mapped transitions
+summarizeCharacterMaps(tree= mcc_tree, character_map_trace_vector=bg_anc_state_trace, out_fp + fn + ".history.tsv", burnin=f_burn)
+
+print("...Super done!")
+
+q()
