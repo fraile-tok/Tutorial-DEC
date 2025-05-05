@@ -1,0 +1,47 @@
+# UNA TASA DE EXTINCION LOCAL GLOBAL
+er_base_sd <- 0.1
+er_base_mean <- ln(abs(1.0)) - 0.5 * er_base_sd^2
+er_base ~ dnLognormal(er_base_mean, er_base_sd)
+er_base.setValue(0.01)
+mv[mvi++] = mvScale(er_base, weight=1)
+
+for (i in 1:n_areas) {
+    for (j in 1: n_areas) {
+        er_bg[i][j] <- abs(0)
+    er_bg[i][i] := er_base
+    }
+}
+
+# UNA TASA DE DISPERSION GLOBAL
+for (i in 1:n_areas) {
+    for (j in 1:n_areas) {
+        dr_bg[i][j] <- 1.0
+    }
+}
+
+Q_DEC := fnDECRateMatrix(dispersalRates=dr_bg,
+                                extirpationRates=er_bg,
+                                maxRangeSize=max_areas,
+                                nullRange="Exclude")
+
+# AHORA EL MODELO DE RELOJ PARA QUE TODO SE PUEDA MEDIR EN TIEMPO: el tiempo de espera para eventos anagenéticos! #
+clock_bg ~ dnLoguniform(min = 0.001, max=10 )
+clock_bg.setValue(1e-2)
+mv[mvi++] = mvScale(clock_bg, lambda=0.2, weight=5)
+
+# clado probs
+clado_event_types = ["s","a"] #["j","f"]
+clado_event_probs <- simplex(1, 1)
+P_DEC := fnDECCladoProbs(eventProbs= clado_event_probs,
+                              eventTypes = clado_event_types,
+                              numCharacters = n_areas,
+                              maxRangeSize = max_areas)
+
+# Las frecuencias de los estados en la raíz
+rf_bg_raw <- rep(1, n_states)
+rf_bg <- simplex(rf_bg_raw)
+
+m_bg ~ dnPhyloCTMCClado(tree = fbd_tree, Q = Q_DEC, rootFrequencies=rf_bg, cladoProbs=P_DEC, branchRates=clock_bg, nSites=1, type="NaturalNumbers")
+
+# Por último 'sujetamos' los datos de distribución a nuestro modelo.
+m_bg.clamp(dat_bg_n)

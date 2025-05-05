@@ -1,0 +1,29 @@
+########################
+# HOARA RESUMIMOS TODO #
+########################
+
+fn = "mi_corrida.1"
+out_fp = "output/"
+data_fp    = "data/"
+
+
+tree = "Test_MCC_Master_Pruned.trees"
+mcc_tree <- readTrees(data_fp + tree)[1]
+
+f_burn = 0.10 # Fracción de burn-in
+n_states = 2 # el número de estados para los que queremos estimar la probabilidad posterior
+
+state_trace_bg = readAncestralStateTrace(file=out_fp + fn + ".bg.states.txt", separator="\t") # la distribuciójn posterior de nuestro modelo DEC
+bg_tree = ancestralStateTree(tree = mcc_tree,
+                       ancestral_state_trace_vector = state_trace_bg,
+                       include_start_states = true,
+                       file = out_fp + fn + ".bg.ase.tre",
+                       summary_statistic="MAP",
+                       reconstruction="conditional",
+                       burnin = f_burn,
+                       nStates = n_states,
+                       site=1)
+
+bg_anc_state_trace = readAncestralStateTrace(out_fp + fn + ".bg" + ".stoch_map.txt") 
+summarizeCharacterMaps(tree= mcc_tree, character_map_trace_vector=bg_anc_state_trace, out_fp + fn + ".history.tsv", burnin=f_burn)
+q()
