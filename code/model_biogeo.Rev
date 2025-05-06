@@ -1,11 +1,11 @@
 # UNA TASA DE EXTINCION LOCAL GLOBAL
-er_base_sd <- 0.1
+er_base_sd <- 0.1 # Hyper-prior(ish)
 er_base_mean <- ln(abs(1.0)) - 0.5 * er_base_sd^2
 er_base ~ dnLognormal(er_base_mean, er_base_sd)
 er_base.setValue(0.01)
 mv[mvi++] = mvScale(er_base, weight=1)
 
-for (i in 1:n_areas) {
+for (i in 1:n_areas) {  # Poblamos la matriz con la tasa de extinción
     for (j in 1: n_areas) {
         er_bg[i][j] <- abs(0)
     er_bg[i][i] := er_base
@@ -13,12 +13,13 @@ for (i in 1:n_areas) {
 }
 
 # UNA TASA DE DISPERSION GLOBAL
-for (i in 1:n_areas) {
+for (i in 1:n_areas) { # Poblamos la matriz con la tasa de dispersión
     for (j in 1:n_areas) {
         dr_bg[i][j] <- 1.0
     }
 }
 
+# Armamos la matriz Q
 Q_DEC := fnDECRateMatrix(dispersalRates=dr_bg,
                                 extirpationRates=er_bg,
                                 maxRangeSize=max_areas,
@@ -30,8 +31,8 @@ clock_bg.setValue(1e-2)
 mv[mvi++] = mvScale(clock_bg, lambda=0.2, weight=5)
 
 # clado probs
-clado_event_types = ["s","a"] #["j","f"]
-clado_event_probs <- simplex(1, 1)
+clado_event_types = ["s","a"] #["j","f"] # s = simpatría, a = alopatría, j = jump_dispersal
+clado_event_probs <- simplex(1, 1) # probabilidades de los eventos de cladogénesis
 P_DEC := fnDECCladoProbs(eventProbs= clado_event_probs,
                               eventTypes = clado_event_types,
                               numCharacters = n_areas,
@@ -41,7 +42,9 @@ P_DEC := fnDECCladoProbs(eventProbs= clado_event_probs,
 rf_bg_raw <- rep(1, n_states)
 rf_bg <- simplex(rf_bg_raw)
 
+# Aquí integramos todo
 m_bg ~ dnPhyloCTMCClado(tree = fbd_tree, Q = Q_DEC, rootFrequencies=rf_bg, cladoProbs=P_DEC, branchRates=clock_bg, nSites=1, type="NaturalNumbers")
+# tree, Q, rootFrequencies, cladoProbs, branchRates, nSites, type
 
 # Por último 'sujetamos' los datos de distribución a nuestro modelo.
-m_bg.clamp(dat_bg_n)
+m_bg.clamp(dat_bg_n) # Atamos el modelo a nuestros datos, para aplicarlo.

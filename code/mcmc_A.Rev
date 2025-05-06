@@ -5,12 +5,12 @@
 #########################
 # ESCRITURA DE ARCHIVOS #
 #########################
-out_fp     = "output/"
-data_fp    = "data/"
-code_fp    = "code/"
+out_fp     = "Tutorial-DEC/output/"
+data_fp    = "Tutorial-DEC/data/"
+code_fp    = "Tutorial-DEC/code/"
 
 # Como queremos correr los analisis?
-under_prior = false
+under_prior = false # Si sólo vamos a correr el prior, true; si vamos a correr también 
 
 if (!exists("job_str")) job_str = "mi_corrida.1"
 out_fn  = job_str
@@ -20,7 +20,7 @@ out_fn  = job_str
 # PARAMETROS GLOBALES #
 #######################
 n_areas = 4 ##!!!!
-max_areas = 2 ##!!!
+max_areas = 2 ##!!! # Número máximo de áreas en las que puede estar una especie
 
 # LA CADENA MCMC #
 n_gens      = 1000
@@ -40,17 +40,17 @@ taxa <- readTaxonData(data_fp + taxa_fn)
 n_taxa <- taxa.size()
 n_branches <- 2 * n_taxa - 2
 
-tree_init_fn = "Test_MCC_Master_Pruned.trees"
+tree_init_fn = "Test_MCC_Master_Pruned.trees" # Jalamos el árbol
 fbd_tree <- readTrees(data_fp + tree_init_fn)[1]
 
 # Los datos de distribución #
-range_fn = "Test_range_pruned.nex"
+range_fn = "Test_range_pruned.nex" # Jalamos la matriz
 max_areas = max_areas
 n_states  = 0
 for (k in 0:max_areas) {n_states += choose(n_areas, k)}
 
-dat_bg_n = readDiscreteCharacterData(file = data_fp + range_fn)
-dat_bg_n = formatDiscreteCharacterData(dat_bg_n, "DEC", n_states)
+dat_bg_n = readDiscreteCharacterData(file = data_fp + range_fn) # Jalar matriz 1,2,3,4,5,6,7,8,9...
+dat_bg_n = formatDiscreteCharacterData(dat_bg_n, "DEC", n_states) # Recodificar 1,2,3,4, 12, 13,23, 14,24,34
 
 ##########################
 # Range Evolution model #
