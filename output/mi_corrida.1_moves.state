@@ -1,0 +1,4 @@
+Scaling(variable=er_base,num_tried_current=1014,num_tried_total=1014,num_accepted_current=319,num_accepted_total=319,tuning_value=1)
+Scaling(variable=clock_bg,num_tried_current=4935,num_tried_total=4935,num_accepted_current=4563,num_accepted_total=4563,tuning_value=0.2)
+Scaling(variable=er_base,num_tried_current=1005,num_tried_total=1005,num_accepted_current=304,num_accepted_total=304,tuning_value=1)
+Scaling(variable=clock_bg,num_tried_current=5046,num_tried_total=5046,num_accepted_current=4680,num_accepted_total=4680,tuning_value=0.2)

@@ -1,10 +1,10 @@
 ########################
-# HOARA RESUMIMOS TODO #
+# AHORA RESUMIMOS TODO #
 ########################
 
 fn = "mi_corrida.1"
-out_fp = "output/"
-data_fp    = "data/"
+out_fp = "Tutorial-DEC/output/"
+data_fp  = "Tutorial-DEC/data/"
 
 
 tree = "Test_MCC_Master_Pruned.trees"
@@ -25,5 +25,6 @@ bg_tree = ancestralStateTree(tree = mcc_tree,
                        site=1)
 
 bg_anc_state_trace = readAncestralStateTrace(out_fp + fn + ".bg" + ".stoch_map.txt") 
-summarizeCharacterMaps(tree= mcc_tree, character_map_trace_vector=bg_anc_state_trace, out_fp + fn + ".history.tsv", burnin=f_burn)
+summarizeCharacterMaps(tree= mcc_tree, character_map_trace_vector=bg_anc_state_trace, out_fp + fn + ".history.tsv", burnin=f_burn, separator="\t")
+#summarizeCharacterMaps(tree= mcc_tree, character_map_trace_vector=bg_anc_state_trace, out_fp + fn + ".history.csv", burnin=f_burn, separator=",")
 q()
