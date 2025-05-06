@@ -13,7 +13,7 @@ for (i in 1:n_areas) {
 }
 
 # UNA TASA DE DISPERSION GLOBAL que depende de la conectividad + otra tasa de dispersion a larga distancia
-ldd ~ dnBeta(1.1,20)
+ldd ~ dnBeta(1.1,20) # Long Distance Dispersal -> distribución Beta
 ldd.setValue(0.1)
 
 for (i in 1:n_areas) {

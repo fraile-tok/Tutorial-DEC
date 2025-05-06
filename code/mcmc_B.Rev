@@ -1,13 +1,15 @@
-############
+# Igual a MCMC_A, pero con un modelo de conectividad entre áreas
+
+############ 
 # SETTINGS #     
 ############ 
 
 #########################
 # ESCRITURA DE ARCHIVOS #
 #########################
-out_fp     = "output/"
-data_fp    = "data/"
-code_fp    = "code/"
+out_fp     = "Tutorial-DEC/output/"
+data_fp    = "Tutorial-DEC/data/"
+code_fp    = "Tutorial-DEC/code/"
 
 # Como queremos correr los analisis?
 under_prior = false
@@ -52,14 +54,15 @@ for (k in 0:max_areas) {n_states += choose(n_areas, k)}
 dat_bg_n = readDiscreteCharacterData(file = data_fp + range_fn)
 dat_bg_n = formatDiscreteCharacterData(dat_bg_n, "DEC", n_states)
 
+# Matriz de conectividad
 n_bg_epochs = 1
-conn_fn = "Test.area_graph.n4.0"
-connectivity_bg = readDataDelimitedFile(file = data_fp + conn_fn + "." + i + ".csv", header=true, rownames=true, delimiter=",")
+conn_fn = "Test.area_graph.n.basic"
+connectivity_bg = readDataDelimitedFile(file = data_fp + conn_fn + ".csv", header=true, rownames=true, delimiter=",")
 
 ##########################
 # Range Evolution model #
 ##########################
-source(code_fp + "model_biogeo.Rev")
+source(code_fp + "model_biogeo_2.Rev")
 
 ########
 # MCMC #
