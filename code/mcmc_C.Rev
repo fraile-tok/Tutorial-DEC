@@ -1,0 +1,87 @@
+############
+# SETTINGS #     
+############ 
+
+#########################
+# ESCRITURA DE ARCHIVOS #
+#########################
+out_fp     = "output/"
+data_fp    = "data/"
+code_fp    = "code/"
+
+# Como queremos correr los analisis?
+under_prior = false
+
+if (!exists("job_str")) job_str = "mi_corrida.2"
+out_fn  = job_str
+
+
+#######################
+# PARAMETROS GLOBALES #
+#######################
+n_areas = 4 ##!!!!
+max_areas = 2 ##!!!
+
+# LA CADENA MCMC #
+n_gens      = 1000
+n_burn      = 500
+tune_freq   = 10
+sample_freq = 10
+n_runs      = 1
+
+# MOVIMIENTOS Y MONITOREO #
+# Los movimientos son algoritmos que proponen cambios a los parámetros, que en su caso se aceptan o se rechazan.
+mvi = 1
+
+# LOS DATOS #
+# Los taxa y el árbol #
+taxa_fn = "Test_taxa_pruned.tsv"
+taxa <- readTaxonData(data_fp + taxa_fn)
+n_taxa <- taxa.size()
+n_branches <- 2 * n_taxa - 2
+
+tree_init_fn = "Test_MCC_Master_Pruned.trees"
+fbd_tree <- readTrees(data_fp + tree_init_fn)[1]
+
+# Los datos de distribución #
+range_fn = "Test_range_pruned.nex"
+max_areas = max_areas
+n_states  = 0
+for (k in 0:max_areas) {n_states += choose(n_areas, k)}
+
+dat_bg_n = readDiscreteCharacterData(file = data_fp + range_fn)
+dat_bg_n = formatDiscreteCharacterData(dat_bg_n, "DEC", n_states)
+
+
+#Las epocas
+bg_times_fn = "Master.bg.times.txt"
+times_bg    = readDataDelimitedFile(file = data_fp + bg_times_fn, header=true, delimiter=",")
+n_bg_epochs = times_bg.size()
+conn_fn = "Master.area_graph.n" + n_areas
+
+for (i in 1:n_epochs_bg) {
+    connectivity_bg[i] = readDataDelimitedFile(file = data_fp + conn_fn + "." + i + ".csv", header=true, rownames=true, delimiter=",")
+}
+
+##########################
+# Range Evolution model #
+##########################
+source(code_fp + "model_biogeo.Rev")
+
+########
+# MCMC #
+########
+#Los monitores son herramientas para reportar los valores de la MCMC.
+mn = VectorMonitors()
+mymodel = model(m_bg)
+mymodel.graph("Model_graph.txt")
+
+mn.append(mnModel(filename = out_fp + out_fn + ".model.log", printgen= sample_freq))
+mn.append(mnJointConditionalAncestralState(filename = out_fp + out_fn + ".bg.states.txt", printgen = sample_freq, tree = fbd_tree, ctmc = m_bg, type="NaturalNumbers"))
+mn.append(mnScreen(printgen= sample_freq))
+mn.append(mnStochasticCharacterMap(ctmc = m_bg, filename = out_fp + out_fn + ".bg.stoch_map.txt", printgen=sample_freq))
+
+# Correr el MCMC #
+mymcmc = mcmc(mymodel, mn, mv, nruns = n_runs)
+mymcmc.run(generations=n_gens, underPrior= under_prior, checkpointInterval=100, checkpointFile = out_fp + out_fn + ".state")
+q()
